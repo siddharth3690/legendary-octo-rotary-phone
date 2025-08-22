@@ -20,7 +20,7 @@ interface ButtonProps {
   disabled?: boolean; // Added disabled state
 }
 
-const Button = ({
+const CustomButton = ({
   text,
   onPress,
   width,
@@ -78,10 +78,10 @@ const Button = ({
         </Text>
       )}
     </TouchableOpacity>
-  );
+  )
 };
 
-export default Button;
+export default CustomButton;
 
 const styles = StyleSheet.create({
   // You can add common button styles here if needed

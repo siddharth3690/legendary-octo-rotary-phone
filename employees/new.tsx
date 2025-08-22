@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
@@ -9,89 +9,131 @@ import {
   SafeAreaView,
   Alert,
   Platform,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { departments,statusOptions } from '../utils/constants';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { EmployeeStackParams } from './Employees_Stack';
-import { EmployeeContext } from '../utils/context';
-import uuid from 'react-native-uuid';
-import { saveEmployees } from '../utils/storage';
-const newId = uuid.v4(); // generates a unique ID
+  
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { departments, statusOptions } from "../utils/constants";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { EmployeeStackParams } from "./Employees_Stack";
+import { EmployeeContext } from "../utils/context";
+import { supabase } from "../services/superbase";
 
-const AddEmployeeScreen = ( ) => {
-  const [formData, setFormData] = useState({
-    id : newId,
-    fullName: '',
-    email: '',
-    role: '',
-    department: '',
+export type Employe = {
+  id ?: number;
+  fullName: string;
+  email: string;
+  role: string;
+  department: string;
+  dateOfJoining: Date;
+  status: "Active" | "Inactive"; // safer with union
+  profilePicture: string | null; // URL or null
+};
+
+const AddEmployeeScreen = () => {
+  
+
+  const update_database = async (Employe_data: Employe) => {
+    try {
+      // Convert Date to ISO string for Supabase
+      const dataToInsert = {
+        fullName: Employe_data.fullName, // Note: using snake_case for database column
+        email: Employe_data.email,
+        role: Employe_data.role,
+        department: Employe_data.department,
+        dateOfJoining: Employe_data.dateOfJoining, // Convert Date to string
+        status: Employe_data.status,
+        profilePicture: Employe_data.profilePicture,
+      };
+
+      const { data, error } = await supabase
+        .from("employes") // Fixed typo: 'employes' -> 'employees'
+        .insert([dataToInsert])
+        .select();
+
+      if (error) {
+        console.error("Error inserting employee:", error);
+        throw error;
+      }
+
+      console.log("Employee added successfully:", data);
+      return data;
+    } catch (err) {
+      console.error("Failed to add employee:", err);
+      throw err;
+    }
+  };
+
+  const [EmployeData, setEmployeData] = useState<Employe>({
+  
+    fullName: "",
+    email: "",
+    role: "",
+    department: "",
     dateOfJoining: new Date(),
-    status: 'Active',
+    status: "Active",
     profilePicture: null,
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDepartmentPicker, setShowDepartmentPicker] = useState(false);
-  const navigation = useNavigation<NativeStackNavigationProp<EmployeeStackParams>>()
+  const navigation =
+    useNavigation<NativeStackNavigationProp<EmployeeStackParams>>();
   const context = useContext(EmployeeContext);
   if (!context) return null;
 
-  const { employees, addEmployee, removeEmployee } = context;
   
+
   const handleInputChange = (field: string, value: string | Date) => {
-    setFormData(prev => ({
+    setEmployeData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleDateChange = (event: any, selectedDate: Date | undefined) => {
-    const currentDate = selectedDate || formData.dateOfJoining;
-    setShowDatePicker(Platform.OS === 'ios');
-    handleInputChange('dateOfJoining', currentDate);
+    const currentDate = selectedDate || EmployeData.dateOfJoining;
+    setShowDatePicker(Platform.OS === "ios");
+    handleInputChange("dateOfJoining", currentDate);
   };
 
-  const formatDate = (date : Date) => {
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+  const EmployeatDate = (date: Date) => {
+    return date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   const handleUploadProfilePicture = () => {
-    Alert.alert(
-      'Upload Profile Picture',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => console.log('Open Camera') },
-        { text: 'Gallery', onPress: () => console.log('Open Gallery') },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    Alert.alert("Upload Profile Picture", "Choose an option", [
+      { text: "Camera", onPress: () => console.log("Open Camera") },
+      { text: "Gallery", onPress: () => console.log("Open Gallery") },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleSaveEmployee = () => {
-    if (!formData.fullName || !formData.email || !formData.role || !formData.department) {
-      Alert.alert('Error', 'Please fill in all required fields')
-      return
-    } 
-    
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    if (
+      !EmployeData.fullName ||
+      !EmployeData.email ||
+      !EmployeData.role ||
+      !EmployeData.department
+    ) {
+      Alert.alert("Error", "Please fill in all required fields");
       return;
     }
 
-    console.log('Employee Data:', formData);
-    Alert.alert('Success', 'Employee added successfully!', [
-      { text: 'OK', onPress: () =>{ addEmployee( formData)}}
-    ]);
-    navigation.replace('index')
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(EmployeData.email)) {
+      Alert.alert("Error", "Please enter a valid email address");
+      return;
+    }
+
+    update_database(EmployeData);
+    console.log("Employee Data:", EmployeData);
+    navigation.replace("index");
   };
 
   const DepartmentPicker = () => (
@@ -101,7 +143,7 @@ const AddEmployeeScreen = ( ) => {
           key={index}
           style={styles.pickerItem}
           onPress={() => {
-            handleInputChange('department', dept);
+            handleInputChange("department", dept);
             setShowDepartmentPicker(false);
           }}
         >
@@ -113,19 +155,19 @@ const AddEmployeeScreen = ( ) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.formContainer}>
-          
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.EmployeContainer}>
           {/* Full Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>👤 Full Name</Text>
             <TextInput
               style={styles.textInput}
               placeholder="John Doe"
-              value={formData.fullName}
-              onChangeText={(text) => handleInputChange('fullName', text)}
+              value={EmployeData.fullName}
+              onChangeText={(text) => handleInputChange("fullName", text)}
             />
           </View>
 
@@ -135,8 +177,8 @@ const AddEmployeeScreen = ( ) => {
             <TextInput
               style={styles.textInput}
               placeholder="johndoe@email.com"
-              value={formData.email}
-              onChangeText={(text) => handleInputChange('email', text)}
+              value={EmployeData.email}
+              onChangeText={(text) => handleInputChange("email", text)}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -148,8 +190,8 @@ const AddEmployeeScreen = ( ) => {
             <TextInput
               style={styles.textInput}
               placeholder="UI Designer"
-              value={formData.role}
-              onChangeText={(text) => handleInputChange('role', text)}
+              value={EmployeData.role}
+              onChangeText={(text) => handleInputChange("role", text)}
             />
           </View>
 
@@ -160,13 +202,18 @@ const AddEmployeeScreen = ( ) => {
               style={styles.dropdownButton}
               onPress={() => setShowDepartmentPicker(!showDepartmentPicker)}
             >
-              <Text style={[styles.dropdownText, !formData.department && styles.placeholderText]}>
-                {formData.department || 'Select Department'}
+              <Text
+                style={[
+                  styles.dropdownText,
+                  !EmployeData.department && styles.placeholderText,
+                ]}
+              >
+                {EmployeData.department || "Select Department"}
               </Text>
               <Text style={styles.dropdownArrow}>▼</Text>
             </TouchableOpacity>
             <Text style={styles.helperText}>(e.g., Tech, HR, Sales)</Text>
-            
+
             {showDepartmentPicker && <DepartmentPicker />}
           </View>
 
@@ -177,14 +224,16 @@ const AddEmployeeScreen = ( ) => {
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
             >
-              <Text style={styles.dateText}>{formatDate(formData.dateOfJoining)}</Text>
+              <Text style={styles.dateText}>
+                {EmployeatDate(EmployeData.dateOfJoining)}
+              </Text>
               <Text style={styles.calendarIcon}>⬇️</Text>
             </TouchableOpacity>
-            
+
             {showDatePicker && (
               <DateTimePicker
                 testID="dateTimePicker"
-                value={formData.dateOfJoining}
+                value={EmployeData.dateOfJoining}
                 mode="date"
                 is24Hour={true}
                 display="default"
@@ -201,10 +250,12 @@ const AddEmployeeScreen = ( ) => {
                 <TouchableOpacity
                   key={index}
                   style={styles.radioOption}
-                  onPress={() => handleInputChange('status', status)}
+                  onPress={() => handleInputChange("status", status)}
                 >
                   <View style={styles.radioButton}>
-                    {formData.status === status && <View style={styles.radioButtonSelected} />}
+                    {EmployeData.status === status && (
+                      <View style={styles.radioButtonSelected} />
+                    )}
                   </View>
                   <Text style={styles.radioText}>{status}</Text>
                 </TouchableOpacity>
@@ -213,12 +264,20 @@ const AddEmployeeScreen = ( ) => {
           </View>
 
           {/* Upload Profile Picture */}
-          <TouchableOpacity style={styles.uploadButton} onPress={handleUploadProfilePicture}>
-            <Text style={styles.uploadButtonText}>➕ Upload Profile Picture (Optional)</Text>
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={handleUploadProfilePicture}
+          >
+            <Text style={styles.uploadButtonText}>
+              ➕ Upload Profile Picture (Optional)
+            </Text>
           </TouchableOpacity>
 
           {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveEmployee}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveEmployee}
+          >
             <Text style={styles.saveButtonText}>📤 Save Employee</Text>
           </TouchableOpacity>
         </View>
@@ -230,18 +289,18 @@ const AddEmployeeScreen = ( ) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -252,13 +311,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   scrollView: {
     flex: 1,
   },
-  formContainer: {
+  EmployeContainer: {
     padding: 20,
   },
   inputGroup: {
@@ -266,56 +325,56 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: "#333",
     marginBottom: 8,
   },
   textInput: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   dropdownButton: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dropdownText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   placeholderText: {
-    color: '#999',
+    color: "#999",
   },
   dropdownArrow: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   pickerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     marginTop: 5,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -324,37 +383,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   pickerItemText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   dateButton: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dateText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   calendarIcon: {
     fontSize: 16,
   },
   radioGroup: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 20,
     marginBottom: 10,
   },
@@ -363,49 +422,48 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 8,
   },
   radioButtonSelected: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
   },
   radioText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   uploadButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderWidth: 1,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
+    borderColor: "#007AFF",
+    borderStyle: "dashed",
     borderRadius: 8,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
   },
   uploadButtonText: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
+    color: "#007AFF",
+    fontWeight: "500",
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     borderRadius: 8,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   saveButtonText: {
     fontSize: 18,
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
 });
 
 export default AddEmployeeScreen;
-

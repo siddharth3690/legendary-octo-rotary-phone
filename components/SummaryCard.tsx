@@ -44,7 +44,7 @@ const SummaryCard = ({total , ontime , late} : SummaryCardprops) => {
       borderColor: '#3B82F6'
     },
     {
-      title: 'On Time\nToday',
+      title: 'Active\nToday',
       value: ontime,
       IconComponent: AntDesign,
       iconName: 'checkcircle',
@@ -52,7 +52,7 @@ const SummaryCard = ({total , ontime , late} : SummaryCardprops) => {
       borderColor: '#10B981'
     },
     {
-      title: 'Late\nToday',
+      title: 'on_Leave\nToday',
       value: late,
       IconComponent: MaterialIcons,
       iconName: 'schedule',

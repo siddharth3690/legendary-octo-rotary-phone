@@ -11,8 +11,8 @@ import Detail from './[id]/detail';
 export type EmployeeStackParams = {
   index: undefined;
   new: undefined;
-  employDetail: { id: string };
-  edit: { id: string };
+  employDetail: { id: number };
+  edit: { id: number };
 };
 
 const Stack = createNativeStackNavigator<EmployeeStackParams>();
